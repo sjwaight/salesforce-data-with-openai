@@ -1,0 +1,10 @@
+{
+  "OpenAI-Instance-Name": {
+    "type": "String",
+    "value": "sw-openai-demo"
+  },
+  "OpenAI-Model-Name": {
+    "type": "String",
+    "value": "sw-test-data-01"
+  }
+}
