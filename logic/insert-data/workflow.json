@@ -1,0 +1,492 @@
+{
+  "definition": {
+    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+    "actions": {
+      "Condition": {
+        "actions": {
+          "Set_ResponseCode_variable": {
+            "inputs": {
+              "name": "ResponseCode",
+              "value": "500"
+            },
+            "runAfter": {},
+            "type": "SetVariable"
+          },
+          "Set_ResponseText_variable": {
+            "inputs": {
+              "name": "ResponseText",
+              "value": "\"An internal error has occurred.\""
+            },
+            "runAfter": {
+              "Set_ResponseCode_variable": [
+                "Succeeded"
+              ]
+            },
+            "type": "SetVariable"
+          }
+        },
+        "expression": {
+          "or": [
+            {
+              "equals": [
+                "@result('MainScope')[0]['status']",
+                "Failed"
+              ]
+            },
+            {
+              "equals": [
+                "@result('MainScope')[0]['status']",
+                "Aborted"
+              ]
+            }
+          ]
+        },
+        "runAfter": {
+          "MainScope": [
+            "Succeeded",
+            "TIMEDOUT",
+            "SKIPPED",
+            "FAILED"
+          ]
+        },
+        "type": "If"
+      },
+      "Initialize_Account_Object_Definition": {
+        "inputs": {
+          "variables": [
+            {
+              "name": "AccountObjectDefintion",
+              "type": "string",
+              "value": "{  \n  \"Name\": \"\",  \n  \"Type\": \"\",  \n  \"Industry\": \"\",  \n  \"BillingAddress\": {  \n    \"street\": \"\",  \n    \"city\": \"\",  \n    \"state\": \"\",  \n    \"postalCode\": \"\",  \n    \"country\": \"\"  \n  },  \n  \"Phone\": \"\",  \n  \"Website\": \"http://\"  \n}"
+            }
+          ]
+        },
+        "runAfter": {
+          "Initialize_Contact_Object_Definition": [
+            "SUCCEEDED"
+          ]
+        },
+        "type": "InitializeVariable"
+      },
+      "Initialize_Contact_Object_Definition": {
+        "inputs": {
+          "variables": [
+            {
+              "name": "ContactObjectDefinition",
+              "type": "string",
+              "value": "{  \n  \"FirstName\": \"\",  \n  \"LastName\": \"\",  \n  \"Email\": \"\",  \n  \"Phone\": \"\",  \n  \"MailingAddress\": {  \n    \"street\": \"\",  \n    \"city\": \"\",  \n    \"state\": \"\",  \n    \"postalCode\": \"\",  \n    \"country\": \"\"  \n  }  \n}"
+            }
+          ]
+        },
+        "runAfter": {
+          "Initialize_New_Salesforce_Object": [
+            "SUCCEEDED"
+          ]
+        },
+        "type": "InitializeVariable"
+      },
+      "Initialize_New_Salesforce_Object": {
+        "inputs": {
+          "variables": [
+            {
+              "name": "NewSalesforceObject",
+              "type": "string"
+            }
+          ]
+        },
+        "runAfter": {},
+        "type": "InitializeVariable"
+      },
+      "Initialize_ResponseCode_variable": {
+        "inputs": {
+          "variables": [
+            {
+              "name": "ResponseCode",
+              "type": "string",
+              "value": "200"
+            }
+          ]
+        },
+        "runAfter": {
+          "Initialize_Account_Object_Definition": [
+            "Succeeded"
+          ]
+        },
+        "type": "InitializeVariable"
+      },
+      "Initialize_ResponseText_variable": {
+        "inputs": {
+          "variables": [
+            {
+              "name": "ResponseText",
+              "type": "string",
+              "value": "The request completed successfully"
+            }
+          ]
+        },
+        "runAfter": {
+          "Initialize_ResponseCode_variable": [
+            "Succeeded"
+          ]
+        },
+        "type": "InitializeVariable"
+      },
+      "MainScope": {
+        "actions": {
+          "Call_OpenAI_API_to_create_Account": {
+            "inputs": {
+              "body": {
+                "max_tokens": 3000,
+                "prompt": "Generate a JSON object for a Salesforce Account object with the following json structure: @{variables('AccountObjectDefintion')}",
+                "temperature": 0.9
+              },
+              "headers": {
+                "Content-Type": "application/json",
+                "api-key": "@body('Get_secret')?['value']"
+              },
+              "method": "POST",
+              "uri": "https://@{parameters('OpenAI-Instance-Name')}.openai.azure.com/openai/deployments/@{parameters('OpenAI-Model-Name')}/completions?api-version=2023-03-15-preview"
+            },
+            "runAfter": {
+              "Get_secret": [
+                "Succeeded"
+              ]
+            },
+            "type": "Http"
+          },
+          "Call_OpenAI_API_to_create_Contact": {
+            "inputs": {
+              "body": {
+                "max_tokens": 3000,
+                "prompt": "Generate a JSON object for a Salesforce Contact object with the following json structure: @{variables('ContactObjectDefinition')}",
+                "temperature": 0.9
+              },
+              "headers": {
+                "Content-Type": "application/json",
+                "api-key": "@body('Get_secret')?['value']"
+              },
+              "method": "POST",
+              "uri": "https://@{parameters('OpenAI-Instance-Name')}.openai.azure.com/openai/deployments/@{parameters('OpenAI-Model-Name')}/completions?api-version=2023-03-15-preview"
+            },
+            "runAfter": {
+              "Get_secret": [
+                "Succeeded"
+              ]
+            },
+            "type": "Http"
+          },
+          "Create_Account_record": {
+            "inputs": {
+              "body": {
+                "BillingCity": "@body('Parse_Account_JSON_Object')?['BillingAddress']?['city']",
+                "BillingCountry": "@body('Parse_Account_JSON_Object')?['BillingAddress']?['country']",
+                "BillingPostalCode": "@body('Parse_Account_JSON_Object')?['BillingAddress']?['postalCode']",
+                "BillingState": "@body('Parse_Account_JSON_Object')?['BillingAddress']?['state']",
+                "BillingStreet": "@body('Parse_Account_JSON_Object')?['BillingAddress']?['street']",
+                "Name": "@body('Parse_Account_JSON_Object')?['Name']",
+                "Phone": "@body('Parse_Account_JSON_Object')?['Phone']",
+                "Type": "@body('Parse_Account_JSON_Object')?['Type']",
+                "Website": "@body('Parse_Account_JSON_Object')?['Website']"
+              },
+              "host": {
+                "connection": {
+                  "referenceName": "salesforce"
+                }
+              },
+              "method": "post",
+              "path": "/v2/datasets/default/tables/@{encodeURIComponent(encodeURIComponent('Account'))}/items"
+            },
+            "runAfter": {
+              "Parse_Account_JSON_Object": [
+                "Succeeded"
+              ]
+            },
+            "type": "ApiConnection"
+          },
+          "Create_Contact_record": {
+            "inputs": {
+              "body": {
+                "AccountId": "@body('Create_Account_record')?['Id']",
+                "Email": "@body('Parse_Contact_JSON_Object')?['Email']",
+                "FirstName": "@body('Parse_Contact_JSON_Object')?['FirstName']",
+                "LastName": "@body('Parse_Contact_JSON_Object')?['LastName']",
+                "MailingCity": "@body('Parse_Contact_JSON_Object')?['MailingAddress']?['city']",
+                "MailingCountry": "@body('Parse_Contact_JSON_Object')?['MailingAddress']?['country']",
+                "MailingPostalCode": "@body('Parse_Contact_JSON_Object')?['MailingAddress']?['postalCode']",
+                "MailingState": "@body('Parse_Contact_JSON_Object')?['MailingAddress']?['state']",
+                "MailingStreet": "@body('Parse_Contact_JSON_Object')?['MailingAddress']?['street']",
+                "Phone": "@body('Parse_Contact_JSON_Object')?['Phone']"
+              },
+              "host": {
+                "connection": {
+                  "referenceName": "salesforce"
+                }
+              },
+              "method": "post",
+              "path": "/v2/datasets/default/tables/@{encodeURIComponent(encodeURIComponent('Contact'))}/items"
+            },
+            "runAfter": {
+              "Create_Account_record": [
+                "Succeeded"
+              ],
+              "Parse_Contact_JSON_Object": [
+                "Succeeded"
+              ]
+            },
+            "type": "ApiConnection"
+          },
+          "Get_secret": {
+            "inputs": {
+              "parameters": {
+                "secretName": "openai-api-key"
+              },
+              "serviceProviderConfiguration": {
+                "connectionName": "keyVault",
+                "operationId": "getSecret",
+                "serviceProviderId": "/serviceProviders/keyVault"
+              }
+            },
+            "runAfter": {},
+            "type": "ServiceProvider"
+          },
+          "Parse_Account_JSON_Object": {
+            "inputs": {
+              "content": "@first(body('Parse_OpenAI_HTTP_Account_response')?['choices']).text",
+              "schema": {
+                "properties": {
+                  "BillingAddress": {
+                    "properties": {
+                      "city": {
+                        "type": "string"
+                      },
+                      "country": {
+                        "type": "string"
+                      },
+                      "postalCode": {
+                        "type": "string"
+                      },
+                      "state": {
+                        "type": "string"
+                      },
+                      "street": {
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "Industry": {
+                    "type": "string"
+                  },
+                  "Name": {
+                    "type": "string"
+                  },
+                  "Phone": {
+                    "type": "string"
+                  },
+                  "Type": {
+                    "type": "string"
+                  },
+                  "Website": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "runAfter": {
+              "Parse_OpenAI_HTTP_Account_response": [
+                "Succeeded"
+              ]
+            },
+            "type": "ParseJson"
+          },
+          "Parse_Contact_JSON_Object": {
+            "inputs": {
+              "content": "@first(body('Parse_OpenAI_HTTP_Contact_response')?['choices']).text",
+              "schema": {
+                "properties": {
+                  "Email": {
+                    "type": "string"
+                  },
+                  "FirstName": {
+                    "type": "string"
+                  },
+                  "LastName": {
+                    "type": "string"
+                  },
+                  "MailingAddress": {
+                    "properties": {
+                      "city": {
+                        "type": "string"
+                      },
+                      "country": {
+                        "type": "string"
+                      },
+                      "postalCode": {
+                        "type": "string"
+                      },
+                      "state": {
+                        "type": "string"
+                      },
+                      "street": {
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "Phone": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "runAfter": {
+              "Parse_OpenAI_HTTP_Contact_response": [
+                "Succeeded"
+              ]
+            },
+            "type": "ParseJson"
+          },
+          "Parse_OpenAI_HTTP_Account_response": {
+            "inputs": {
+              "content": "@body('Call_OpenAI_API_to_create_Account')",
+              "schema": {
+                "properties": {
+                  "choices": {
+                    "items": {
+                      "properties": {
+                        "finish_reason": {
+                          "type": "string"
+                        },
+                        "index": {
+                          "type": "integer"
+                        },
+                        "logprobs": {},
+                        "text": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "text",
+                        "index",
+                        "logprobs",
+                        "finish_reason"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "created": {
+                    "type": "integer"
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "model": {
+                    "type": "string"
+                  },
+                  "object": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "runAfter": {
+              "Call_OpenAI_API_to_create_Account": [
+                "Succeeded"
+              ]
+            },
+            "type": "ParseJson"
+          },
+          "Parse_OpenAI_HTTP_Contact_response": {
+            "inputs": {
+              "content": "@body('Call_OpenAI_API_to_create_Contact')",
+              "schema": {
+                "properties": {
+                  "choices": {
+                    "items": {
+                      "properties": {
+                        "finish_reason": {
+                          "type": "string"
+                        },
+                        "index": {
+                          "type": "integer"
+                        },
+                        "logprobs": {},
+                        "text": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "text",
+                        "index",
+                        "logprobs",
+                        "finish_reason"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "created": {
+                    "type": "integer"
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "model": {
+                    "type": "string"
+                  },
+                  "object": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "runAfter": {
+              "Call_OpenAI_API_to_create_Contact": [
+                "Succeeded"
+              ]
+            },
+            "type": "ParseJson"
+          }
+        },
+        "runAfter": {
+          "Initialize_ResponseText_variable": [
+            "Succeeded"
+          ]
+        },
+        "type": "Scope"
+      },
+      "Response": {
+        "inputs": {
+          "body": "@variables('ResponseText')",
+          "headers": {
+            "Content-Type": "text/plain"
+          },
+          "statusCode": "@variables('ResponseCode')"
+        },
+        "kind": "http",
+        "runAfter": {
+          "Condition": [
+            "Succeeded",
+            "FAILED"
+          ]
+        },
+        "type": "Response"
+      }
+    },
+    "contentVersion": "1.0.0.0",
+    "outputs": {},
+    "triggers": {
+      "When_a_HTTP_request_is_received": {
+        "inputs": {},
+        "kind": "Http",
+        "type": "Request"
+      }
+    }
+  },
+  "kind": "Stateless"
+}
