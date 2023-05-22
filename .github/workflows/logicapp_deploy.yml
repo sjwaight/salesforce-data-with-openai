@@ -30,9 +30,9 @@ jobs:
     - name: Package logic
       run: (cd logic; mkdir -p ../output; zip -r ../output/logic.zip .)
     - name: Upload app zip package
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
-        name: logic
+        name: logic-app
         path: ./output/
         retention-days: 1 
 
@@ -68,7 +68,7 @@ jobs:
         azPSVersion: latest
 
     - name: Deploy to Azure Logic App
-      uses: Azure/functions-action@v1.3.1
+      uses: Azure/functions-action@v1
       id: la
       with:
         app-name: ${{secrets.RG_LA}}
