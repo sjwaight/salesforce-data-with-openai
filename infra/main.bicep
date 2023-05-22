@@ -131,6 +131,32 @@ resource logicapp_app_site_resource 'Microsoft.Web/sites@2022-09-01' = {
       functionAppScaleLimit: 0
       minimumElasticInstanceCount: 1
       functionsRuntimeScaleMonitoringEnabled: false
+      appSettings: [
+        {
+          name: 'AzureWebJobsStorage'
+          value: 'DefaultEndpointsProtocol=https;AccountName=${storage_account_name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${storage_account_resource.listKeys().keys[0].value}'
+        }
+        {
+          name: 'FUNCTIONS_EXTENSION_VERSION'
+          value: '~4'
+        }
+        {
+          name: 'WEBSITE_NODE_DEFAULT_VERSION'
+          value: '~16'
+        }
+        {
+          name: 'FUNCTIONS_WORKER_RUNTIME'
+          value: 'node'
+        }
+        {
+          name: 'OPENAI_MODEL_NAME'
+          value: openai_model_name
+        }
+        {
+          name: 'OPENAI_INSTANCE_NAME'
+          value: openai_service_name
+        }
+      ]
     }
     scmSiteAlsoStopped: false
     clientAffinityEnabled: false
