@@ -41,7 +41,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [logic_app_build]
     environment: 
-      name: Dev
+      name: Demo
     steps: 
     - name: Checkout
       uses: actions/checkout@v1    
@@ -55,7 +55,7 @@ jobs:
         name: logic-app
         path: ./output/
         
-    - name: Get publish Profile
+    - name: Get Publish Profile
       id: publishprofile
       uses: azure/powershell@v1
       with:
@@ -74,10 +74,3 @@ jobs:
         app-name: ${{secrets.RG_LA}}
         package: './output/logic.zip'
         publish-profile: ${{steps.publishprofile.outputs.profile}}
-
-    - name: Swap parameter files 
-      id: params
-      uses: azure/CLI@v1
-      with:
-        inlineScript: |
-          az functionapp deploy --resource-group ${{ secrets.RG_LA }} --name ${{ env.LA_NAME }} --src-path  logic/parameters.json --type static
