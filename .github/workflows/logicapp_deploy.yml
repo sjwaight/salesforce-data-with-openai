@@ -52,7 +52,7 @@ jobs:
         enable-AzPSSession: true 
     - uses: actions/download-artifact@master
       with:
-        name: logic
+        name: logic-app
         path: ./output/
         
     - name: Get publish Profile
