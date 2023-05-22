@@ -1,10 +1,10 @@
 {
   "OpenAI-Instance-Name": {
     "type": "String",
-    "value": "sw-openai-demo"
+    "value": "@appsetting('OPENAI_INSTANCE_NAME')"
   },
   "OpenAI-Model-Name": {
     "type": "String",
-    "value": "sw-test-data-01"
+    "value": "@appsetting('OPENAI_MODEL_NAME')"
   }
 }
